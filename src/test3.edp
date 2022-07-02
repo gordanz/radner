@@ -1,0 +1,74 @@
+include "writer.edp"
+mesh Th=SQ(125,125,-5,20,-10,10); 
+fespace Vh(Th,P1); real Npoliter, dt,t,p,q,T; int i,j,m,n,nt,N;
+Vh sol,u,v,f,f0,g0,l,u0,uu,uuu,X,Y,XX,YY,XY,XXx,XYy,YYy,dxu,dyu,dxxu,dxyu;
+// 0=u_t + XX u_xx + YY u_yy + XY u_xy + X u_x + Y u_y + f, Ellipticity means 4 * XX*YY \geq XY^2, Borders 1 y=ymin, 2 x=xmax, 3 y=ymax, 4 x=xmin
+problem Operate(u,v) =
+	 int2d(Th)( u*v/dt ) 
+	+int2d(Th)( XX*dx(u)*dx(v)+XY*dx(u)*dy(v)+YY*dy(u)*dy(v) ) // var
+	-int2d(Th)( X*dx(u)*v+ Y*dy(u)*v ) // drift
+	+int2d(Th)( XXx*dx(u)*v+ YYy*dy(u)*v + XYy*dy(u)*v ) // corr 
+    	-int2d(Th)( f*v ) // rhs
+        -int2d(Th)( uu*v/dt ) 
+	+on(4, u=l); // Dirichlet
+
+problem Smooth(u,v) = 
+	int2d(Th) (u*v/ (20*T))+
+	int2d(Th) ( dx(u)*dx(v) + dy(u)*dy(v)) -
+	int2d(Th) (uu*v/(20*T));
+
+problem Smooth2(u,v) =  
+	int2d(Th) (u*v/ (T))+
+	int2d(Th) ( dx(u)*dx(v) + dy(u)*dy(v)) -
+	int2d(Th) (uu*v/(T));
+
+
+// Inits
+u0=y; u0=max(0,u0); u0=min(1,u0);
+real sdp = sqrt(2.0/3.141592),sqTmt,Tmt;
+// parameters
+nt=3; T=0.5; N=50; Npoliter=2;
+
+dt=T/nt; Tmt=dt; 
+Vh[int] nu(nt+1), g(nt+1), V0(nt+1);
+p=-0.5; q=p/(1-p);
+for (i=1; i<= nt; i++) 
+{	
+        sqTmt=sqrt(Tmt);
+	nu[i]= 0; 
+        g[i]= (1 + q)*exp(-0.5*(1 + q)*(-q*Tmt + 2*x));
+        V0[i] = 0.5*(-sdp*sqTmt*exp(-0.5*(-1 + y)*(-1+y)/Tmt) 
+                    +sdp*sqTmt*exp(-0.5*y*y/Tmt) 
+                    -(-1 + y)*erf((-1 + y)/(sqrt(2)*sqTmt)) 
+                    +y*erf(y/(sqrt(2)*sqTmt))+ 1);
+        Tmt=Tmt+dt;
+};
+
+
+for (j=0; j<=Npoliter; j++) // policy iteration loop
+{
+  uu=u0;
+  for (i=1; i<= nt; i++) // time loop
+  { 
+       // coefficients
+    XX = 0.5*(1+nu[i]^2); XXx=dx(XX); // uxx
+    YY = 0.5;             YYy=dy(YY); // uyy
+    XY = -nu[i];          XYy=dy(XY); // uxy
+    X=0.5*(1+nu[i]^2); 
+    Y=-nu[i]; // ux and uy
+    f=nu[i]^2*g[i]; // rhs
+    l=V0[i]; 
+    Operate;
+    sol=u;
+    dxu=dx(u); dyu=dy(u); dxxu=dx(dxu); dxyu=dy(dxu);
+    nu[i]=(dyu+dxyu)/(0.001+g[i]+dxxu+dxu);
+    nu[i]=max(nu[i],-N); nu[i]=min(nu[i],N);
+    uu=nu[i]; Smooth; nu[i]=u;
+
+    uu=sol; 
+  }
+   // myplot(nu[nt]);
+  //Th=adaptmesh(Th,uu+nu[nt]);
+};
+
+writevtk("c.vtk",Th,sol);

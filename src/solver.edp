@@ -1,0 +1,67 @@
+include "mesh.idp"
+
+// Terminal values + mesh adapt
+real mp=1.5;
+u1T=mp*20*sin(y*x)*dmp; u2T= mp*20*cos(-2*y+3*x)*dmp; 
+//Th=adaptmesh(Th,u1T+u2T,hmax=0.1)
+
+Vh ldold,rho;
+u1old=u1T; u2old=u2T; ldold=0.5* dx(u1old)+0.5*dx(u2old);
+real[int] CameraPositionValue = [20,20,20];
+real[int] CameraFocalPointValue = [0,0,0];
+
+// Tha main loop
+for (real t=T; t>=0; t-=dt) 
+{ 
+  cout << u2old[].min << " , " << u2old[].max << "\n";
+ 
+  plot( u1old, dim=3, fill=1, value=1, aspectratio=1, 
+               ShowAxes=0, ColorScheme=2, 
+               CameraPosition=CameraPositionValue,
+               CameraFocalPoint=CameraFocalPointValue
+  ,ps="plots/u1"+picnum+".jpg" 
+  ); picnum++;
+
+  plot( u2old, dim=3, fill=1, value=1, aspectratio=1, 
+               ShowAxes=0, ColorScheme=2, 
+               CameraPosition=CameraPositionValue,
+               CameraFocalPoint=CameraFocalPointValue
+  ,ps="plots/u2"+picnum+".jpg" 
+  ); picnum++;
+
+  plot( ldold, dim=3, fill=1, value=1, aspectratio=1, 
+               ShowAxes=0, ColorScheme=2, 
+               CameraPosition=CameraPositionValue,
+               CameraFocalPoint=CameraFocalPointValue
+  ,ps="plots/ld"+picnum+".jpg" 
+  ); picnum++;
+
+ 
+  // The first policy iteration loop
+  rho = dy(u1old); // the first guess
+  for (int i=npiter; i>0; i--)
+  {
+    // cout << "Iteration number: "<< i;
+    f1=0.5*ldold^2+0.5*rho^2; // free term
+    Y1=-rho; 
+    X1=-ldold;
+    LinearEquation1; // Do a t-step
+    rho = dy(u1);
+  }
+
+
+  // The second policy iteration loop
+  rho = dy(u2old); // the first guess
+  for (int i=npiter; i>0; i--)
+  {
+    // cout << "Iteration number: "<< i;
+    f2=0.5*ldold^2+0.5*rho^2; // free term
+    Y2=-rho; 
+    X2=-ldold;
+    LinearEquation2; // Do a t-step
+    rho = dy(u2);
+  }
+   
+  u1old=u1; u2old=u2; ldold=0.5* dx(u1)+0.5*dx(u2);
+  
+};

@@ -1,0 +1,45 @@
+int nx=100, ny=100;
+real xmin=-3.0;
+real xmax=3.0;
+real ymin=-3.0;
+real ymax=3.0;
+
+border C(t=0, 2*pi)  { x= cos(t); y=sin(t);}; 
+// mesh Th=buildmesh(C(700));	
+mesh Th=square(nx,ny,[xmin+x*(xmax-xmin), ymin+y*(ymax-ymin)]);
+plot(Th,fill=1,dim=2);
+
+fespace Vh(Th,P1);
+Vh xvel, yvel, u,v,uu,uuu;
+
+xvel=-y;
+yvel=x;
+
+real dt = 0.17;
+real T=1.5*pi;
+real sigma=0.01;
+int d=3;
+int f=1;
+
+// Terminal condition
+uu=exp( - 10*((x-0.8)^2+(y)^2) );
+plot(uu,dim=d,fill=f,wait=1);
+  	 	
+// problem HeatEquation(u,v) =
+//   int2d(Th)( u*v + dt*sigma*(dx(u)*dx(v)+dy(u)*dy(v)))
+//  - int2d(Th) (uu*v )
+//  + on(1,2,3,4,u=0);
+
+/*int m;*/
+/*for (m=0; m<=T/dt; m++)*/
+/*{*/
+	/*//HeatEquation;*/
+        /*u=uu; */
+        /*uu=convect([xvel,yvel],-dt,u);*/
+/*};*/
+
+/*plot(uu,dim=d,fill=f,wait=1);*/
+/*plot(Th);*/
+
+
+

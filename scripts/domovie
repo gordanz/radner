@@ -1,0 +1,4 @@
+mencoder -ovc copy -mf w=640:h=480:fps=4:type=jpg mf://ld*.jpg  -o ld.avi
+mencoder -ovc copy -mf w=640:h=480:fps=4:type=jpg mf://u1*.jpg  -o u1.avi
+mencoder -ovc copy -mf w=640:h=480:fps=4:type=jpg mf://u2*.jpg  -o u2.avi
+

@@ -1,0 +1,73 @@
+macro LINEBORDER(A,B,lab) border A#B(t=0,1){ real t1=1.-t; 
+x=A#x*t1+B#x*t; y=A#y*t1+B#y*t; label=lab;} // end macro
+
+// dimensions of the grid
+real xmin=-5.0, xmax=5.0;
+real ymin=-5.0, ymax=5.0;
+
+real Ax=xmin,Ay=ymin; real Bx=xmax,By=ymin;
+real Cx=xmax,Cy=ymax; real Dx=xmin,Dy=ymax;
+LINEBORDER(A,B,1) LINEBORDER(B,C,2)
+LINEBORDER(C,D,3) LINEBORDER(D,A,4)
+
+// subdivisions
+int nx=20, ny=20;
+mesh Th=buildmesh(AB(nx)+BC(ny)+CD(nx)+DA(ny),fixeborder=1);
+fespace Vh(Th,P1);
+
+// declarations
+Vh u,v,nu,u1,u2;
+Vh f,g;
+Vh u0,uu,uuu;
+Vh X,Y,XX,YY,XY;
+Vh XXx,XYy,YYy;
+
+real dt,T;
+
+// Terminal condition
+u0=sin(x)*cos(y);
+
+// Ellipticity means 
+// 4 * XX*YY \geq XY^2
+
+// Borders
+// -------
+// 1 ... y=ymin
+// 2 ... x=xmax
+// 3 ... y=ymax
+// 4 ... x=xmin
+
+// The equation is
+// 0=u_t + 1/2 u_xx + 1/2 u_yy + X u_x + Y u_y + f 
+problem LinearEquation(u,v) =
+	int2d(Th)( u*v/dt ) 
+	//operator 
+	+int2d(Th)(0.5*dx(u)*dx(v)+0.5*dy(u)*dy(v)) // Laplacian
+	-int2d(Th)( X*dx(u)*v+ Y*dy(u)*v ) // Drift
+    	// right-hand side
+	-int2d(Th)( f*v ) // the right-hand side
+    -int2d(Th)( uu*v/dt ); // feigning d/dt
+	// Neumann boundary conditions (nothing!)
+
+// The Main Loop
+uu=u0; // initialize the terminal condition
+dt = 0.05; T=1; // time, steps
+
+
+X=0; // ux
+Y=0; // uy
+
+plot(u0,fill=1,dim=3);
+
+for (int m=0; m<=T/dt; m++) 
+{ 
+    LinearEquation; uu=u; // Do one step, u->uu
+}
+
+plot(u,fill=1,dim=3);
+
+u1=u0/u*exp(1.0);
+
+plot(u1,fill=1,dim=3);
+
+cout << u1(0,0);

@@ -1,0 +1,33 @@
+macro Pi 3.141592 //end
+// ofstream ofile("output.txt");
+// Parameters, grid and fe-space generation
+real xmin=-10, xmax=10, ymin=-10, ymax=10; 
+int nx=500, ny=500, nt=100, npiter=2, picnum=1000;
+real T=1.0,dt=T/nt;
+mesh Th=square(nx,ny,[xmin+(xmax-xmin)*x,ymin+(ymax-ymin)*y]);
+fespace Vh(Th,P1);// Finite-element space P1 on the grid Th
+
+Vh u1,u1T,u1old,v1,X1,Y1,f1,toplot;
+problem LinearEquation1(u1,v1) =
+	int2d(Th)( u1*v1/dt )  
+	+int2d(Th)( 0.5*dx(u1)*dx(v1)+0.5*dy(u1)*dy(v1) ) // Laplacian
+	-int2d(Th)( X1*dx(u1)*v1+ Y1*dy(u1)*v1 ) // Drift
+	-int2d(Th)( f1*v1 ) // the right-hand side
+        -int2d(Th)( u1old*v1/dt ); // feigning d/dt
+
+
+Vh u2,u2T,u2old,v2,X2,Y2,f2;
+problem LinearEquation2(u2,v2) =
+	int2d(Th)( u2*v2/dt )  
+	+int2d(Th)( 0.5*dx(u2)*dx(v2)+0.5*dy(u2)*dy(v2) ) // Laplacian
+	-int2d(Th)( X2*dx(u2)*v2+ Y2*dy(u2)*v2 ) // Drift
+	-int2d(Th)( f2*v2 ) // the right-hand side
+        -int2d(Th)( u2old*v2/dt ); // feigning d/dt
+
+
+
+// Auxiliary functions
+func dmp = exp(-1*(x^2+y^2)); // damper function
+
+
+

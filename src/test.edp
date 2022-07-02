@@ -1,0 +1,62 @@
+macro Pi 3.141592 //end
+// ofstream ofile("output.txt");
+// Parameters, grid and fe-space generation
+real xmin=0, xmax=4*Pi, ymin=-Pi/2, ymax=3*Pi-Pi/2; 
+int nx=100, ny=100, nt=80,npiter=1;
+real T=1.0,dt=T/nt;
+mesh Th=square(nx,ny,[xmin+(xmax-xmin)*x,ymin+(ymax-ymin)*y]);
+fespace Vh(Th,P1);// Finite-element space P1 on the grid Th
+
+Vh u,uold,u0,u1,v,X,Y,f,ld,ld0,rho,rhodel;// declarations
+// The equation is
+// 0=u_t + 1/2 u_xx + 1/2 u_yy + X u_x + Y u_y + f 
+
+problem LinearEquation1(u1,v1) =
+	int2d(Th)( u1*v1/dt )  
+	+int2d(Th)( 0.5*dx(u1)*dx(v1)+0.5*dy(u1)*dy(v1) ) // Laplacian
+	-int2d(Th)( X1*dx(u1)*v1+ Y1*dy(u1)*v1 ) // Drift
+	-int2d(Th)( f1*v1 ) // the right-hand side
+        -int2d(Th)( u1old*v1/dt ); // feigning d/dt
+
+problem LinearEquation2(u2,v2) =
+	int2d(Th)( u2*v2/dt )  
+	+int2d(Th)( 0.5*dx(u2)*dx(v2)+0.5*dy(u2)*dy(v2) ) // Laplacian
+	-int2d(Th)( X2*dx(u2)*v2+ Y2*dy(u2)*v2 ) // Drift
+	-int2d(Th)( f2*v2 ) // the right-hand side
+        -int2d(Th)( u2old*v2/dt ); // feigning d/dt
+
+// The Terminal conditions
+func dmp = exp(-0.3*(x^2+y^2)); // damper function
+u1=sin(y)*cos(x); // otherwise, sin(x)*cos(3*y)*dmp;
+ld0=-(sqrt(1+cos(2*x)*cos(2*y))/sqrt(2))-sin(x)*sin(y);// t-independent for now
+Th=adaptmesh(Th,uold+ld0,hmax=0.1);
+//plot(Th);
+//plot(ld0,fill=1, value=1, dim=3, aspectratio=1);
+
+// The Main Loop
+uold=u0*exp(T);
+plot(u0,fill=1, value=1, aspectratio=1,dim=3);
+
+for (real t=T; t>=0; t-=dt) 
+{ 
+  // ofile << "\nTime = " << t << "\nErrors: ";
+  ld=ld0*exp(t);
+  // The policy iteration loop
+  rho = dy(uold); // the first guess
+  for (int i=npiter; i>0; i--)
+  {
+    // cout << "Iteration number: "<< i;
+    f=0.5*ld^2+0.5*rho^2; // free term
+    Y=-rho; 
+    X=-ld;
+    LinearEquation; // Do a t-step
+    //rhodel = abs(rho-dy(u));   
+    rho = dy(u);
+    //ofile << rhodel[].max << ", ";
+  }
+    //plot(u, fill=1,value=1,dim=3,aspectratio=1);
+    uold=u; // replace
+    cout << ".\n";
+};
+u1=u-u0;
+plot(u1,fill=1,value=1,aspectratio=1,dim=3);
